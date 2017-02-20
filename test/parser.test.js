@@ -1536,4 +1536,69 @@ describe('SELTEC 3 PDF Parser', () => {
 
     testResult(store.getSchema(), query, expected, done);
   });
+
+  it('should handle manual timing', (done) => {
+    const tokens = [
+      new Token(Type.COMPETITION_NAME, 'Test Competition'),
+      new Token(Type.COMPETITION_CITY, 'Test City'),
+      new Token(Type.COMPETITION_VENUE, 'Test'),
+      new Token(Type.COMPETITION_START_DATE, '01.01.2016'),
+      new Token(Type.DISCIPLINE_NAME, '50m'),
+      new Token(Type.AGE_GROUP_NAME, 'Men'),
+      new Token(Type.GROUP_NUMBER, '1'),
+      new Token(Type.EVENT_DATE, '01.01.2016'),
+      new Token(Type.EVENT_TIME, '12:45'),
+      new Token(Type.ATHLETE_POSITION, '1'),
+      new Token(Type.ATHLETE_BIB, '1'),
+      new Token(Type.ATHLETE_FULL_NAME, 'Doe John'),
+      new Token(Type.ATHLETE_YOB, '2000'),
+      new Token(Type.ATHLETE_CLUB_NAME, 'Test Club'),
+      new Token(Type.PERFORMANCE, '6,7*'),
+      new Token(Type.END),
+    ];
+
+    const parser = new Parser(tokens);
+    const store = parser.parse();
+    const query = `
+      query TestQuery {
+        meeting(id: 1) {
+          events {
+            rounds {
+              groups {
+                results {
+                  performance
+                  automaticTiming
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const expected = {
+      meeting: {
+        events: [
+          {
+            rounds: [
+              {
+                groups: [
+                  {
+                    results: [
+                      {
+                        performance: 6.7,
+                        automaticTiming: false,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    testResult(store.getSchema(), query, expected, done);
+  });
 });

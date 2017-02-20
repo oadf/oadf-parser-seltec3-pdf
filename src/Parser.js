@@ -193,7 +193,7 @@ export default class Parser {
     // Add data to store
     const club = this.store.addClub(clubName);
     const athlete = this.store.addAthlete(firstName, lastName, yob, null, citizenship, club, bib);
-    const result = this.store.addAthleteResult(athlete, resultGroup, performanceInfo.performance, performanceInfo.exception, wind, position, qualified, weight, comment);
+    const result = this.store.addAthleteResult(athlete, resultGroup, performanceInfo.performance, performanceInfo.exception, wind, position, qualified, weight, comment, performanceInfo.automaticTiming);
 
     if ([TokenType.ATTEMPT1, TokenType.ATTEMPT2, TokenType.ATTEMPT3, TokenType.ATTEMPT4, TokenType.ATTEMPT5, TokenType.ATTEMPT6].includes(this.lookahead.type)) {
       this.attempts(event, round, resultGroup, result);
@@ -249,7 +249,7 @@ export default class Parser {
 
     // Add data to store
     const clubId = this.store.addClub(clubName);
-    const resultId = this.store.addTeamResult(clubId, resultGroup, performanceInfo.performance, performanceInfo.exception, position, qualified);
+    const resultId = this.store.addTeamResult(clubId, resultGroup, performanceInfo.performance, performanceInfo.exception, position, qualified, null, performanceInfo.automaticTiming);
 
     while (this.lookahead.type === TokenType.ATHLETE_BIB || this.lookahead.type === TokenType.ATHLETE_FULL_NAME) {
       const comment = this.teamMember(resultId, clubId);
@@ -456,7 +456,7 @@ export default class Parser {
       const combinedDiscipline = this.store.getCombinedDisciplineByEventAndDiscipline(event, discipline);
       const combinedRound = this.store.addRound(event, disciplineName, null, null, null, combinedDiscipline);
       const combinedGroup = this.store.addGroup(combinedRound, 1);
-      this.store.addCombinedResult(athlete, combinedGroup, parent, result.performance, result.exception, result.wind, result.points);
+      this.store.addCombinedResult(athlete, combinedGroup, parent, result.performance, result.exception, result.wind, result.points, null, null, null, null, result.automaticTiming);
     });
 
     if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
@@ -499,6 +499,11 @@ export default class Parser {
       };
     }
 
+    let automaticTiming = true;
+    if (performanceString.endsWith('*')) {
+      automaticTiming = false;
+    }
+
     const multiplicators = [60, 3600];
     const parts = performanceString.replace('.', '').replace(',', '.').split(':');
 
@@ -516,6 +521,7 @@ export default class Parser {
     return {
       performance: parseFloat(performance),
       exception: null,
+      automaticTiming,
     };
   }
 
