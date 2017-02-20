@@ -26,11 +26,15 @@ export default class Column {
     return this.name;
   }
 
+  getLeft() {
+    return this.left;
+  }
+
   getRight() {
     return this.right;
   }
 
-  match(element, previousColumn) {
+  match(element, previousColumn, nextColumn) {
     const left = element.getX();
     const right = element.getX() + element.getWidth();
 
@@ -71,7 +75,8 @@ export default class Column {
     if (
       this.alignment === Alignment.LEFT &&
       previousColumn != null &&
-      left > previousColumn.getRight()
+      left > previousColumn.getRight() &&
+      (!nextColumn || right < nextColumn.getLeft())
     ) {
       this.left = left;
       if (diffRight < 0) {

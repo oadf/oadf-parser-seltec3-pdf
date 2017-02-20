@@ -14,6 +14,8 @@ const RowType = {
   ATTEMPT_WIND: 'ATTEMPT_WIND',
   HEIGHT: 'HEIGHT',
   LONG_ATHLETE_NAME: 'LONG_ATHLETE_NAME',
+  LONG_CLUB_NAME: 'LONG_CLUB_NAME',
+  LONG_ATHLETE_CLUB_NAME: 'LONG_ATHLETE_CLUB_NAME',
   COMMENT: 'COMMENT',
   TEAM_MEMBERS: 'TEAM_MEMBERS',
   TEAM_MEMBER_YOB: 'TEAM_MEMBER_YOB',
@@ -148,7 +150,7 @@ function getEventInfo(text) {
   return tokens;
 }
 
-function matchResultColumn(resultColumns, resultColumnNames, element, teamResult) {
+function matchResultColumn(resultColumns, resultColumnNames, element, teamResult, allColumns = false) {
   const text = element.getText();
   // There is a special case where a weight is printed between club and performance
   const lastColumn = resultColumns[currentColumn - 1];
@@ -156,14 +158,22 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
     return new Token(TokenType.RESULT_WEIGHT, element.getText());
   }
 
-  for (let i = currentColumn; i < resultColumns.length; i += 1) {
+  let startColumn = currentColumn;
+  if (allColumns) {
+    startColumn = 0;
+  }
+
+  for (let i = startColumn; i < resultColumns.length; i += 1) {
     const column = resultColumns[i];
     let previousColumn = null;
+    const nextColumn = resultColumns[i + 1];
     if (i > 0) {
       previousColumn = resultColumns[i - 1];
     }
-    if (column.match(element, previousColumn)) {
-      currentColumn += 1;
+    if (column.match(element, previousColumn, nextColumn)) {
+      if (!allColumns) {
+        currentColumn += 1;
+      }
       const columnName = column.getName();
       if (columnName === 'Rang') {
         if (teamResult) return new Token(TokenType.TEAM_POSITION, text);
@@ -193,7 +203,9 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
       /* istanbul ignore next */
       return new Token(TokenType.UNKNOWN, text);
     }
-    currentColumn += 1;
+    if (!allColumns) {
+      currentColumn += 1;
+    }
   }
   const patternRound = new RegExp('^(?:[0-9]{0,2}\\.|-)/[IVX]*$');
   const roundMatch = text.match(patternRound);
@@ -431,10 +443,24 @@ function isCombinedPointsRow(row) {
 
 function isComment(element) {
   const text = element.getText();
-  if (text.includes('IWR') || text.split(' ').length > 3) {
+  if (text.includes('IWR') || text.includes(',') || text.split(' ').length > 2) {
     return true;
   }
   return false;
+}
+
+function updateLongName(tokens, type, text) {
+  for (let j = tokens.length - 1; j >= 0; j -= 1) {
+    const token = tokens[j];
+    if (token.type === type) {
+      if (token.text.endsWith('-') || token.text.endsWith('/')) {
+        token.text = `${token.text}${text}`;
+      } else {
+        token.text = `${token.text} ${text}`;
+      }
+      break;
+    }
+  }
 }
 
 export default (pages) => {
@@ -521,12 +547,34 @@ export default (pages) => {
       } else if (nextRowTypes.includes(RowType.SPLIT_TIME) && row[0].getText().match(/^[0-9]{1,5}m$/)) {
         rowType = RowType.SPLIT_TIME;
         nextRowTypes = [RowType.EVENT_HEADER, RowType.SPLIT_TIME, RowType.SPLIT_HEADER];
-      } else if ((nextRowTypes.includes(RowType.LONG_ATHLETE_NAME) || nextRowTypes.includes(RowType.COMMENT)) && row.length === 1) {
+      } else if (
+        nextRowTypes.includes(RowType.LONG_ATHLETE_CLUB_NAME) && row.length === 2 &&
+        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME &&
+        matchResultColumn(resultColumns, resultColumnNames, row[1], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
+      ) {
+        rowType = RowType.LONG_ATHLETE_CLUB_NAME;
+        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+      } else if (
+        nextRowTypes.includes(RowType.LONG_CLUB_NAME) && row.length === 1 &&
+        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
+      ) {
+        rowType = RowType.LONG_CLUB_NAME;
+        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+      } else if (
+        (nextRowTypes.includes(RowType.LONG_ATHLETE_NAME) || nextRowTypes.includes(RowType.COMMENT)) && row.length === 1 &&
+        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME
+      ) {
         if (isComment(row[0])) {
           rowType = RowType.COMMENT;
         } else {
           rowType = RowType.LONG_ATHLETE_NAME;
         }
+        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+      } else if (
+        nextRowTypes.includes(RowType.COMMENT) && row.length === 1 &&
+        row[0].getX() > resultColumns[resultColumns.length - 1].getRight()
+      ) {
+        rowType = RowType.COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
       } else if (nextRowTypes.includes(RowType.TEAM_MEMBERS) && row.length > 1 && matchTeamMember(row[1]).length > 0) {
         rowType = RowType.TEAM_MEMBERS;
@@ -560,7 +608,8 @@ export default (pages) => {
             RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT,
             RowType.LONG_ATHLETE_NAME, RowType.ATTEMPT,
             RowType.SPLIT_HEADER, RowType.COMMENT,
-            RowType.COMBINED_RESULT,
+            RowType.COMBINED_RESULT, RowType.LONG_CLUB_NAME,
+            RowType.LONG_ATHLETE_CLUB_NAME,
           ];
         }
       } else if (nextRowTypes.includes(RowType.ATTEMPT) && attemptColumns.length > 0 && isAttemptRow(row)) {
@@ -592,6 +641,8 @@ export default (pages) => {
         rowType = RowType.COMBINED_POINTS_SUM;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER];
       }
+
+      currentColumn = 0;
 
       // console.log(rowType);
 
@@ -640,12 +691,16 @@ export default (pages) => {
             tokens.push(...matchHeightColumn(currentHeightColumns, element));
             break;
           case RowType.LONG_ATHLETE_NAME:
-            for (let j = tokens.length - 1; j >= 0; j -= 1) {
-              const token = tokens[j];
-              if (token.type === TokenType.ATHLETE_FULL_NAME) {
-                token.text = `${token.text} ${text}`;
-                break;
-              }
+            updateLongName(tokens, TokenType.ATHLETE_FULL_NAME, text);
+            break;
+          case RowType.LONG_CLUB_NAME:
+            updateLongName(tokens, TokenType.ATHLETE_CLUB_NAME, text);
+            break;
+          case RowType.LONG_ATHLETE_CLUB_NAME:
+            if (i === 0) {
+              updateLongName(tokens, TokenType.ATHLETE_FULL_NAME, text);
+            } else if (i === 1) {
+              updateLongName(tokens, TokenType.ATHLETE_CLUB_NAME, text);
             }
             break;
           case RowType.COMMENT:
