@@ -158,6 +158,12 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
     return new Token(TokenType.RESULT_WEIGHT, element.getText());
   }
 
+  const patternRound = new RegExp('^(?:[0-9]{0,2}\\.|-)/[IVX]*$');
+  const roundMatch = text.match(patternRound);
+  if (roundMatch) {
+    return new Token(TokenType.GROUP_NUMBER_PLACE, text);
+  }
+
   let startColumn = currentColumn;
   if (allColumns) {
     startColumn = 0;
@@ -207,11 +213,7 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
       currentColumn += 1;
     }
   }
-  const patternRound = new RegExp('^(?:[0-9]{0,2}\\.|-)/[IVX]*$');
-  const roundMatch = text.match(patternRound);
-  if (roundMatch) {
-    return new Token(TokenType.GROUP_NUMBER_PLACE, text);
-  }
+
   /* istanbul ignore next */
   return new Token(TokenType.UNKNOWN, text);
 }
