@@ -137,7 +137,7 @@ function getEventInfo(text) {
     return tokens;
   }
 
-  if (text === 'Finale' || text === 'Zeitläufe' || text === 'Finalstand') {
+  if (text === 'Finale' || text === 'Zeitläufe' || text === 'Finalstand' || text === 'Run_TimedHeats') {
     tokens.push(new Token(TokenType.ROUND_NAME, text));
     return tokens;
   }
@@ -422,7 +422,7 @@ function isHeightHeaderRow(row) {
 }
 
 function isHeightRow(row) {
-  return matchPattern(new RegExp('^X{0,}O?-?$'), row);
+  return matchPattern(new RegExp('^X{0,}O?(?:-|r)?$'), row);
 }
 
 function isCombinedHeaderRow(row) {
@@ -477,6 +477,7 @@ export default (pages) => {
   let combinedColumns = [];
   let pageNo = 1;
   let report = false;
+  let lastRowType;
 
   for (const page of pages) {
     if (pageNo > 1) {
@@ -528,6 +529,16 @@ export default (pages) => {
         rowType = RowType.EVENT_INFO;
         nextRowTypes = [RowType.RESULT_HEADER, RowType.EVENT_INFO, RowType.EVENT_HEADER];
       } else if (
+        (nextRowTypes.includes(RowType.LONG_ATHLETE_NAME) || nextRowTypes.includes(RowType.COMMENT)) && row.length === 1 &&
+        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME
+      ) {
+        if (isComment(row[0]) || !nextRowTypes.includes(RowType.LONG_ATHLETE_NAME)) {
+          rowType = RowType.COMMENT;
+        } else {
+          rowType = RowType.LONG_ATHLETE_NAME;
+        }
+        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT, RowType.COMMENT];
+      } else if (
         nextRowTypes.includes(RowType.EVENT_HEADER) &&
         getEventHeader(row[0].getText()).length > 1
       ) {
@@ -559,16 +570,6 @@ export default (pages) => {
         matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
       ) {
         rowType = RowType.LONG_CLUB_NAME;
-        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
-      } else if (
-        (nextRowTypes.includes(RowType.LONG_ATHLETE_NAME) || nextRowTypes.includes(RowType.COMMENT)) && row.length === 1 &&
-        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME
-      ) {
-        if (isComment(row[0])) {
-          rowType = RowType.COMMENT;
-        } else {
-          rowType = RowType.LONG_ATHLETE_NAME;
-        }
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
       } else if (
         nextRowTypes.includes(RowType.COMMENT) && row.length === 1 &&
@@ -704,7 +705,11 @@ export default (pages) => {
             }
             break;
           case RowType.COMMENT:
-            tokens.push(new Token(TokenType.COMMENT, text));
+            if (lastRowType === RowType.COMMENT) {
+              updateLongName(tokens, TokenType.COMMENT, text);
+            } else {
+              tokens.push(new Token(TokenType.COMMENT, text));
+            }
             break;
           case RowType.TEAM_MEMBERS:
             tokens.push(...matchTeamMember(element, resultColumns));
@@ -771,6 +776,8 @@ export default (pages) => {
             console.log(`Row Type missing: ${text}`);
         }
       }
+
+      lastRowType = rowType;
     }
 
     pageNo += 1;
