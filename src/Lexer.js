@@ -441,6 +441,16 @@ function isCombinedPointsRow(row) {
   return matchPattern(new RegExp('^((?:[0-9]{1,2}\\.)?[0-9]{1,3})$'), row);
 }
 
+function isEventInfoRow(row) {
+  for (const field of row) {
+    const result = getEventInfo(field.getText());
+    if (result.length === 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function isComment(element) {
   const text = element.getText();
   if (text.includes('IWR') || text.includes(',') || text.split(' ').length > 2) {
@@ -525,7 +535,7 @@ export default (pages) => {
       } else if (nextRowTypes.includes(RowType.COMBINED_TEAM_MEMBER_RESULT) && row[row.length - 1].getText().endsWith('Punkte')) {
         rowType = RowType.COMBINED_TEAM_MEMBER_RESULT;
         nextRowTypes = [RowType.COMBINED_TEAM_MEMBER_RESULT, RowType.COMBINED_TEAM_RESULT, RowType.EVENT_HEADER];
-      } else if (nextRowTypes.includes(RowType.EVENT_INFO)) {
+      } else if (nextRowTypes.includes(RowType.EVENT_INFO) && isEventInfoRow(row)) {
         rowType = RowType.EVENT_INFO;
         nextRowTypes = [RowType.RESULT_HEADER, RowType.EVENT_INFO, RowType.EVENT_HEADER];
       } else if (
@@ -543,7 +553,7 @@ export default (pages) => {
         getEventHeader(row[0].getText()).length > 1
       ) {
         rowType = RowType.EVENT_HEADER;
-        nextRowTypes = [RowType.EVENT_INFO, RowType.RESULT_HEADER, RowType.COMBINED_TEAM_RESULT];
+        nextRowTypes = [RowType.EVENT_INFO, RowType.RESULT_HEADER, RowType.COMBINED_TEAM_RESULT, RowType.EVENT_HEADER];
         resultColumns = [];
         resultColumnNames = [];
         attemptColumns = [];
