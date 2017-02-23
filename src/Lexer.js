@@ -138,7 +138,7 @@ function getEventInfo(text) {
     return tokens;
   }
 
-  if (text === 'Finale' || text === 'Zeitläufe' || text === 'Finalstand' || text === 'Run_TimedHeats') {
+  if (text === 'Finale' || text === 'Zeitläufe' || text === 'Finalstand' || text === 'Run_TimedHeats' || text === 'Final') {
     tokens.push(new Token(TokenType.ROUND_NAME, text));
     return tokens;
   }

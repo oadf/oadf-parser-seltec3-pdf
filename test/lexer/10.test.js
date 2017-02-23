@@ -20,6 +20,7 @@ describe('SELTEC 3 PDF Lexer 10.pdf', () => {
         new Token(Type.AGE_GROUP_NAME, 'Männliche Jugend U18'),
         new Token(Type.EVENT_DATE, '22.01.2017'),
         new Token(Type.EVENT_TIME, '18:00'),
+        new Token(Type.ROUND_NAME, 'Final'),
         new Token(Type.TEAM_POSITION, '1'),
         new Token(Type.TEAM_NAME, 'LG Rhein-Wied'),
         new Token(Type.TEAM_COUNTRY, 'GER'),

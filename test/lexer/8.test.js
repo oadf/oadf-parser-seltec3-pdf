@@ -173,6 +173,7 @@ describe('SELTEC 3 PDF Lexer 8.pdf', () => {
         new Token(Type.AGE_GROUP_NAME, 'Männliche Jugend U20'),
         new Token(Type.EVENT_DATE, '22.01.2017'),
         new Token(Type.EVENT_TIME, '16:45'),
+        new Token(Type.ROUND_NAME, 'Final'),
         new Token(Type.ATHLETE_POSITION, '1'),
         new Token(Type.ATHLETE_BIB, '651'),
         new Token(Type.ATHLETE_FULL_NAME, 'Klein Jonas'),
