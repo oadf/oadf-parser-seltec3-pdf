@@ -1601,4 +1601,269 @@ describe('SELTEC 3 PDF Parser', () => {
 
     testResult(store.getSchema(), query, expected, done);
   });
+
+  it('should handle multiple results with height', (done) => {
+    const tokens = [
+      new Token(Type.COMPETITION_NAME, 'Test Competition'),
+      new Token(Type.COMPETITION_CITY, 'Test City'),
+      new Token(Type.COMPETITION_VENUE, 'Test'),
+      new Token(Type.COMPETITION_START_DATE, '01.01.2016'),
+      new Token(Type.DISCIPLINE_NAME, 'Hochsprung'),
+      new Token(Type.AGE_GROUP_NAME, 'Jugend M14'),
+      new Token(Type.GROUP_NUMBER, '1'),
+      new Token(Type.EVENT_DATE, '05.02.2017'),
+      new Token(Type.EVENT_TIME, '12:30'),
+      new Token(Type.ATHLETE_POSITION, '1'),
+      new Token(Type.ATHLETE_BIB, '2'),
+      new Token(Type.ATHLETE_FULL_NAME, 'Doe John'),
+      new Token(Type.ATHLETE_YOB, '2003'),
+      new Token(Type.ATHLETE_CLUB_NAME, 'Test Club'),
+      new Token(Type.PERFORMANCE, '1,55'),
+      new Token(Type.HEIGHT, '1,15'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,20'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,25'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,28'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,31'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,34'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,37'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,40'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,43'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,46'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,49'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,52'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,55'),
+      new Token(Type.HEIGHT_RESULT, 'XXO'),
+      new Token(Type.HEIGHT, '1,60'),
+      new Token(Type.HEIGHT_RESULT, 'XXX'),
+      new Token(Type.ATHLETE_POSITION, '2'),
+      new Token(Type.ATHLETE_BIB, '104'),
+      new Token(Type.ATHLETE_FULL_NAME, 'Mustermann Max'),
+      new Token(Type.ATHLETE_YOB, '2003'),
+      new Token(Type.ATHLETE_CLUB_NAME, 'Test Club'),
+      new Token(Type.PERFORMANCE, '1,34'),
+      new Token(Type.HEIGHT, '1,15'),
+      new Token(Type.HEIGHT_RESULT, '-'),
+      new Token(Type.HEIGHT, '1,20'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,25'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,28'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,31'),
+      new Token(Type.HEIGHT_RESULT, 'XO'),
+      new Token(Type.HEIGHT, '1,34'),
+      new Token(Type.HEIGHT_RESULT, 'O'),
+      new Token(Type.HEIGHT, '1,37'),
+      new Token(Type.HEIGHT_RESULT, 'XXX'),
+      new Token(Type.END),
+    ];
+
+    const parser = new Parser(tokens);
+    const store = parser.parse();
+    const query = `
+      query TestQuery {
+        meeting(id: 1) {
+          events {
+            rounds {
+              groups {
+                results {
+                  performance
+                  ...AthleteResultFields
+                }
+              }
+            }
+          }
+        }
+      }
+      fragment AthleteResultFields on AthleteResult {
+        athlete {
+          firstName
+          lastName
+        }
+        heights {
+          height {
+            height
+          }
+          performance
+        }
+      }
+    `;
+
+    const expected = {
+      meeting: {
+        events: [
+          {
+            rounds: [
+              {
+                groups: [
+                  {
+                    results: [
+                      {
+                        performance: 1.55,
+                        athlete: {
+                          firstName: 'John',
+                          lastName: 'Doe',
+                        },
+                        heights: [
+                          {
+                            height: {
+                              height: 1.15,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.20,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.25,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.28,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.31,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.34,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.37,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.40,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.43,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.46,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.49,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.52,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.55,
+                            },
+                            performance: 'XXO',
+                          },
+                          {
+                            height: {
+                              height: 1.60,
+                            },
+                            performance: 'XXX',
+                          },
+                        ],
+                      },
+                      {
+                        performance: 1.34,
+                        athlete: {
+                          firstName: 'Max',
+                          lastName: 'Mustermann',
+                        },
+                        heights: [
+                          {
+                            height: {
+                              height: 1.15,
+                            },
+                            performance: '-',
+                          },
+                          {
+                            height: {
+                              height: 1.20,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.25,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.28,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.31,
+                            },
+                            performance: 'XO',
+                          },
+                          {
+                            height: {
+                              height: 1.34,
+                            },
+                            performance: 'O',
+                          },
+                          {
+                            height: {
+                              height: 1.37,
+                            },
+                            performance: 'XXX',
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    testResult(store.getSchema(), query, expected, done);
+  });
 });

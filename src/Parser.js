@@ -129,7 +129,7 @@ export default class Parser {
   result(event, round, groupId) {
     if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
       this.singleResult(event, round, groupId);
-    } else {
+    } else if (this.lookahead.type === TokenType.TEAM_POSITION || this.lookahead.type === TokenType.TEAM_NAME) {
       this.teamResult(event, round, groupId);
     }
   }
@@ -200,7 +200,7 @@ export default class Parser {
     } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
       this.event();
     } else if (this.lookahead.type === TokenType.HEIGHT) {
-      this.heights();
+      this.heights(event, round, group, result);
     } else if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
       this.result(event, round, group);
     } else if (this.lookahead.type === TokenType.SPLIT_GROUP) {
@@ -375,11 +375,15 @@ export default class Parser {
     }
   }
 
-  heights(event, round, group) {
-    this.expression(TokenType.HEIGHT);
-    this.expression(TokenType.HEIGHT_RESULT);
+  heights(event, round, group, result) {
+    const height = this.expression(TokenType.HEIGHT);
+    const performance = this.expression(TokenType.HEIGHT_RESULT);
+
+    const heightId = this.store.addHeight(group, parseFloat(height.replace(',', '.')));
+    this.store.addHeightResult(result, heightId, performance);
+
     if (this.lookahead.type === TokenType.HEIGHT) {
-      this.heights();
+      this.heights(event, round, group, result);
     } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
       this.event();
     } else {
