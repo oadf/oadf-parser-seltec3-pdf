@@ -16,6 +16,7 @@ const RowType = {
   LONG_ATHLETE_NAME: 'LONG_ATHLETE_NAME',
   LONG_CLUB_NAME: 'LONG_CLUB_NAME',
   LONG_ATHLETE_CLUB_NAME: 'LONG_ATHLETE_CLUB_NAME',
+  LONG_TEAM_CLUB_NAME: 'LONG_TEAM_CLUB_NAME',
   COMMENT: 'COMMENT',
   TEAM_MEMBERS: 'TEAM_MEMBERS',
   TEAM_MEMBER_YOB: 'TEAM_MEMBER_YOB',
@@ -572,11 +573,18 @@ export default (pages) => {
         nextRowTypes = [RowType.EVENT_HEADER, RowType.SPLIT_TIME, RowType.SPLIT_HEADER];
       } else if (
         nextRowTypes.includes(RowType.LONG_ATHLETE_CLUB_NAME) && row.length === 2 &&
-        matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME &&
-        matchResultColumn(resultColumns, resultColumnNames, row[1], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
+        matchResultColumn(resultColumns, resultColumnNames, row[0], false, true).type === TokenType.ATHLETE_FULL_NAME &&
+        matchResultColumn(resultColumns, resultColumnNames, row[1], false, true).type === TokenType.ATHLETE_CLUB_NAME
       ) {
         rowType = RowType.LONG_ATHLETE_CLUB_NAME;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+      } else if (
+        nextRowTypes.includes(RowType.LONG_TEAM_CLUB_NAME) && row.length === 2 &&
+        matchResultColumn(resultColumns, resultColumnNames, row[0], true, true).type === TokenType.TEAM_NAME &&
+        matchResultColumn(resultColumns, resultColumnNames, row[1], true, true).type === TokenType.TEAM_CLUB_NAME
+      ) {
+        rowType = RowType.LONG_TEAM_CLUB_NAME;
+        nextRowTypes = [RowType.RESULT, RowType.TEAM_MEMBERS];
       } else if (
         nextRowTypes.includes(RowType.LONG_CLUB_NAME) && row.length === 1 &&
         matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
@@ -615,7 +623,9 @@ export default (pages) => {
         teamResult = resultColumns[1].getName() !== 'StNr';
         heightsRow = -1;
         if (teamResult) {
-          nextRowTypes = [RowType.TEAM_MEMBERS];
+          nextRowTypes = [
+            RowType.TEAM_MEMBERS, RowType.LONG_TEAM_CLUB_NAME,
+          ];
         } else {
           nextRowTypes = [
             RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT,
@@ -708,6 +718,13 @@ export default (pages) => {
             break;
           case RowType.LONG_CLUB_NAME:
             updateLongName(tokens, TokenType.ATHLETE_CLUB_NAME, text);
+            break;
+          case RowType.LONG_TEAM_CLUB_NAME:
+            if (i === 0) {
+              updateLongName(tokens, TokenType.TEAM_NAME, text);
+            } else if (i === 1) {
+              updateLongName(tokens, TokenType.TEAM_CLUB_NAME, text);
+            }
             break;
           case RowType.LONG_ATHLETE_CLUB_NAME:
             if (i === 0) {
