@@ -138,16 +138,17 @@ function getEventInfo(text) {
     return tokens;
   }
 
-  if (text === 'Finale' || text === 'Zeitläufe' || text === 'Finalstand' || text === 'Run_TimedHeats' || text === 'Final' || text === 'Zeitvorläufe') {
-    tokens.push(new Token(TokenType.ROUND_NAME, text));
-    return tokens;
-  }
-
   if (text.startsWith('Es qualifizieren sich')) {
     tokens.push(new Token(TokenType.GROUP_INFO, text));
     return tokens;
   }
 
+  const eventHeader = getEventHeader(text);
+  if (eventHeader.length > 0 && eventHeader[0].type !== TokenType.UNKNOWN) {
+    return tokens;
+  }
+
+  tokens.push(new Token(TokenType.ROUND_NAME, text));
   return tokens;
 }
 
@@ -569,7 +570,7 @@ export default (pages) => {
       } else if (nextRowTypes.includes(RowType.COMBINED_HEADER) && isCombinedHeaderRow(row)) {
         rowType = RowType.COMBINED_HEADER;
         nextRowTypes = [RowType.RESULT];
-      } else if (nextRowTypes.includes(RowType.SPLIT_TIME) && row[0].getText().match(/^[0-9]{1,5}m$/)) {
+      } else if (nextRowTypes.includes(RowType.SPLIT_TIME) && row[0].getText().match(/^[0-9]{1,5}\s*m$/)) {
         rowType = RowType.SPLIT_TIME;
         nextRowTypes = [RowType.EVENT_HEADER, RowType.SPLIT_TIME, RowType.SPLIT_HEADER];
       } else if (

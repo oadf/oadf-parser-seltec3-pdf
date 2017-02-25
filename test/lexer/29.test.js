@@ -20,6 +20,7 @@ describe('SELTEC 3 PDF Lexer 29.pdf', () => {
         new Token(Type.AGE_GROUP_NAME, 'Kinder M11'),
         new Token(Type.EVENT_DATE, '18.09.2016'),
         new Token(Type.EVENT_TIME, '12:00'),
+        new Token(Type.ROUND_NAME, 'Dreikampf'),
         new Token(Type.ATHLETE_POSITION, '1'),
         new Token(Type.ATHLETE_BIB, '13'),
         new Token(Type.ATHLETE_FULL_NAME, 'Hoch Nicolas'),
