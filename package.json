@@ -2,6 +2,18 @@
   "name": "oadf-parser-seltec3-pdf",
   "description": "A parser for SELTEC3 PDF result list files which puts tha data into a GraphQL schema",
   "version": "0.2.4",
+  "author": "Christoph Kraemer <ck@ladb.de>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/oadf/oadf-parser-seltec3-pdf"
+  },
+  "bugs": {
+    "url": "https://github.com/oadf/oadf-parser-seltec3-pdf/issues"
+  },
+  "keywords": [
+    "oadf"
+  ],
   "scripts": {
     "build": "babel src --out-dir lib",
     "test": "nyc --require babel-register mocha --recursive",
