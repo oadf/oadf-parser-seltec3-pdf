@@ -1,7 +1,7 @@
 {
   "name": "oadf-parser-seltec3-pdf",
   "description": "A parser for SELTEC3 PDF result list files which puts tha data into a GraphQL schema",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "scripts": {
     "build": "babel src --out-dir lib",
     "test": "nyc --require babel-register mocha --recursive",

@@ -32,7 +32,7 @@ export default class Parser {
       this.meetingId = this.store.addMeeting(name, venue, startDate);
     }
 
-    if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
+    while (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
       this.event();
     }
   }
@@ -112,11 +112,11 @@ export default class Parser {
       groupObject.wind = wind.wind;
     }
 
-    if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    } else if (this.lookahead.type === TokenType.COMBINED_DISCIPLINE) {
-      this.combinedDisciplines(event, round, group);
-    } else if (
+    if (this.lookahead.type === TokenType.COMBINED_DISCIPLINE) {
+      this.combinedDisciplines(event);
+    }
+
+    while (
       this.lookahead.type === TokenType.ATHLETE_POSITION ||
       this.lookahead.type === TokenType.ATHLETE_BIB ||
       this.lookahead.type === TokenType.TEAM_POSITION ||
@@ -196,17 +196,13 @@ export default class Parser {
     const result = this.store.addAthleteResult(athlete, resultGroup, performanceInfo.performance, performanceInfo.exception, wind, position, qualified, weight, comment, performanceInfo.automaticTiming);
 
     if ([TokenType.ATTEMPT1, TokenType.ATTEMPT2, TokenType.ATTEMPT3, TokenType.ATTEMPT4, TokenType.ATTEMPT5, TokenType.ATTEMPT6].includes(this.lookahead.type)) {
-      this.attempts(event, round, resultGroup, result);
-    } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
+      this.attempts(result);
     } else if (this.lookahead.type === TokenType.HEIGHT) {
       this.heights(event, round, group, result);
-    } else if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
-      this.result(event, round, group);
     } else if (this.lookahead.type === TokenType.SPLIT_GROUP) {
       this.splitRound(round);
     } else if (this.lookahead.type === TokenType.COMBINED_PERFORMANCE) {
-      this.combinedPerformances(event, round, group, athlete, result);
+      this.combinedPerformances(event, athlete, result);
     }
   }
 
@@ -258,12 +254,6 @@ export default class Parser {
         result.comment = comment;
       }
     }
-
-    if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    } else if (this.lookahead.type === TokenType.TEAM_POSITION || this.lookahead.type === TokenType.TEAM_NAME) {
-      this.teamResult(event, round, group);
-    }
   }
 
   teamMember(resultId, clubId) {
@@ -293,7 +283,7 @@ export default class Parser {
     return comment;
   }
 
-  attempts(event, round, group, result) {
+  attempts(result) {
     if (this.lookahead.type === TokenType.ATTEMPT1) {
       const performance = Parser.processPerformance(this.expression(TokenType.ATTEMPT1));
       this.store.addAttempt(result, 1, performance.performance, performance.exception);
@@ -319,24 +309,17 @@ export default class Parser {
       this.store.addAttempt(result, 6, performance.performance, performance.exception);
     }
 
-    if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    } else if (
-      this.lookahead.type === TokenType.ATHLETE_POSITION ||
-      this.lookahead.type === TokenType.ATHLETE_BIB
-    ) {
-      this.result(event, round, group);
-    } else if (
+    if (
       [
         TokenType.ATTEMPT_WIND1, TokenType.ATTEMPT_WIND2, TokenType.ATTEMPT_WIND3,
         TokenType.ATTEMPT_WIND4, TokenType.ATTEMPT_WIND5, TokenType.ATTEMPT_WIND6,
       ].includes(this.lookahead.type)
     ) {
-      this.attemptWind(event, round, group, result);
+      this.attemptWind(result);
     }
   }
 
-  attemptWind(event, round, group, result) {
+  attemptWind(result) {
     if (this.lookahead.type === TokenType.ATTEMPT_WIND1) {
       const wind = Parser.processWind(this.expression(TokenType.ATTEMPT_WIND1));
       const attempt = this.store.getAttemptByResultAndNumber(result, 1);
@@ -367,12 +350,6 @@ export default class Parser {
       const attempt = this.store.getAttemptByResultAndNumber(result, 6);
       attempt.wind = wind;
     }
-
-    if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    } else if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
-      this.result(event, round, group);
-    }
   }
 
   heights(event, round, group, result) {
@@ -384,10 +361,6 @@ export default class Parser {
 
     if (this.lookahead.type === TokenType.HEIGHT) {
       this.heights(event, round, group, result);
-    } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    } else {
-      this.result(event, round, group);
     }
   }
 
@@ -416,12 +389,10 @@ export default class Parser {
       this.splitTime(round, group);
     } else if (this.lookahead.type === TokenType.SPLIT_GROUP) {
       this.splitRound(round);
-    } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
     }
   }
 
-  combinedDisciplines(event, round, group) {
+  combinedDisciplines(event) {
     let idx = 1;
     while (this.lookahead.type === TokenType.COMBINED_DISCIPLINE) {
       const disciplineName = this.expression(TokenType.COMBINED_DISCIPLINE);
@@ -430,10 +401,9 @@ export default class Parser {
       this.store.addRound(event, disciplineName, null, null, null, combinedDiscipline);
       idx += 1;
     }
-    this.result(event, round, group);
   }
 
-  combinedPerformances(event, round, group, athlete, parent) {
+  combinedPerformances(event, athlete, parent) {
     const combinedResults = {};
 
     while (this.lookahead.type === TokenType.COMBINED_PERFORMANCE) {
@@ -462,12 +432,6 @@ export default class Parser {
       const combinedGroup = this.store.addGroup(combinedRound, 1);
       this.store.addCombinedResult(athlete, combinedGroup, parent, result.performance, result.exception, result.wind, result.points, null, null, null, null, result.automaticTiming);
     });
-
-    if (this.lookahead.type === TokenType.ATHLETE_POSITION || this.lookahead.type === TokenType.ATHLETE_BIB) {
-      this.singleResult(event, round, group);
-    } else if (this.lookahead.type === TokenType.DISCIPLINE_NAME) {
-      this.event();
-    }
   }
 
   static processName(name) {
