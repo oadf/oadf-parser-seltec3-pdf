@@ -553,6 +553,7 @@ export default (pages) => {
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT, RowType.COMMENT];
       } else if (
         nextRowTypes.includes(RowType.EVENT_HEADER) &&
+        row[0].getX() < 100 &&
         getEventHeader(row[0].getText()).length > 1
       ) {
         rowType = RowType.EVENT_HEADER;
