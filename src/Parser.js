@@ -185,6 +185,11 @@ export default class Parser {
       resultGroup = this.store.addGroup(round, 1);
     }
 
+    if (this.lookahead.type === TokenType.POINTS) {
+      // TODO Save points in store?
+      this.expression(TokenType.POINTS);
+    }
+
     let comment;
     if (this.lookahead.type === TokenType.COMMENT) {
       comment = this.expression(TokenType.COMMENT);

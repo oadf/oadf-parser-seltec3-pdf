@@ -1938,4 +1938,70 @@ describe('SELTEC 3 PDF Parser', () => {
 
     testResult(store.getSchema(), query, expected, done);
   });
+
+  it('should handle points is single result list', (done) => {
+    const tokens = [
+      new Token(Type.COMPETITION_NAME, 'Test Competition'),
+      new Token(Type.COMPETITION_CITY, 'Test City'),
+      new Token(Type.COMPETITION_VENUE, 'Test'),
+      new Token(Type.COMPETITION_START_DATE, '01.01.2016'),
+      new Token(Type.DISCIPLINE_NAME, 'Javelin Throw'),
+      new Token(Type.AGE_GROUP_NAME, 'M'),
+      new Token(Type.EVENT_DATE, '01.01.2016'),
+      new Token(Type.EVENT_TIME, '12:45'),
+      new Token(Type.ROUND_NAME, 'Test'),
+      new Token(Type.ATHLETE_POSITION, '1'),
+      new Token(Type.ATHLETE_BIB, '36'),
+      new Token(Type.ATHLETE_FULL_NAME, 'Doe John'),
+      new Token(Type.ATHLETE_YOB, '2000'),
+      new Token(Type.ATHLETE_COUNTRY, 'GER'),
+      new Token(Type.ATHLETE_CLUB_NAME, 'Test Club'),
+      new Token(Type.PERFORMANCE, '29,74'),
+      new Token(Type.GROUP_NUMBER_PLACE, '1./I'),
+      new Token(Type.POINTS, '363'),
+      new Token(Type.END),
+    ];
+
+    const parser = new Parser(tokens);
+    const store = parser.parse();
+    const query = `
+      query TestQuery {
+        meeting(id: 1) {
+          events {
+            rounds {
+              groups {
+                results {
+                  performance
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const expected = {
+      meeting: {
+        events: [
+          {
+            rounds: [
+              {
+                groups: [
+                  {
+                    results: [
+                      {
+                        performance: 29.74,
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    testResult(store.getSchema(), query, expected, done);
+  });
 });
