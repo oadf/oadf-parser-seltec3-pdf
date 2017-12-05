@@ -46,6 +46,8 @@ columnAlignments.Jahr = Alignment.CENTER;
 contentTypes.Jahr = ContentType.INTEGER;
 columnAlignments.Land = Alignment.CENTER;
 contentTypes.Land = ContentType.TEXT;
+columnAlignments.LV = Alignment.CENTER;
+contentTypes.LV = ContentType.TEXT;
 columnAlignments.Verein = Alignment.LEFT;
 contentTypes.Verein = ContentType.TEXT;
 columnAlignments.Leistung = Alignment.CENTER;
@@ -123,6 +125,13 @@ function getEventInfo(text) {
     tokens.push(new Token(TokenType.WIND, result3[1]));
     return tokens;
   }
+  
+  const pattern6 = new RegExp('^Wind:\\s(([+-]?[0-9],[0-9],?)*)m/s$');
+  const result6 = text.match(pattern6);
+  if (result6) {
+    tokens.push(new Token(TokenType.WIND, result6[1]));
+    return tokens;
+  }
 
   const pattern4 = new RegExp('^Athleten:\\s([0-9]{1,3})$');
   const result4 = text.match(pattern4);
@@ -193,7 +202,7 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
         return new Token(TokenType.ATHLETE_FULL_NAME, text);
       } else if (columnName === 'Jahr') {
         return new Token(TokenType.ATHLETE_YOB, text);
-      } else if (columnName === 'Land') {
+      } else if (columnName === 'Land' || columnName === 'LV') {
         if (teamResult) return new Token(TokenType.TEAM_COUNTRY, text);
         return new Token(TokenType.ATHLETE_COUNTRY, text);
       } else if (columnName === 'Verein') {
@@ -228,28 +237,26 @@ function matchAttemptColumn(attemptColumns, element, wind) {
     if (i > 0) {
       previousColumn = attemptColumns[i - 1];
     }
-    if (column.match(element, previousColumn)) {
-      currentColumn += 1;
-      const columnName = column.getName();
-      if (columnName === '- V1 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND1, text);
-        return new Token(TokenType.ATTEMPT1, text);
-      } else if (columnName === '- V2 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND2, text);
-        return new Token(TokenType.ATTEMPT2, text);
-      } else if (columnName === '- V3 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND3, text);
-        return new Token(TokenType.ATTEMPT3, text);
-      } else if (columnName === '- V4 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND4, text);
-        return new Token(TokenType.ATTEMPT4, text);
-      } else if (columnName === '- V5 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND5, text);
-        return new Token(TokenType.ATTEMPT5, text);
-      } else if (columnName === '- V6 -') {
-        if (wind) return new Token(TokenType.ATTEMPT_WIND6, text);
-        return new Token(TokenType.ATTEMPT6, text);
-      }
+    currentColumn += 1;
+    const columnName = column.getName();
+    if (columnName === '- V1 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND1, text);
+      return new Token(TokenType.ATTEMPT1, text);
+    } else if (columnName === '- V2 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND2, text);
+      return new Token(TokenType.ATTEMPT2, text);
+    } else if (columnName === '- V3 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND3, text);
+      return new Token(TokenType.ATTEMPT3, text);
+    } else if (columnName === '- V4 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND4, text);
+      return new Token(TokenType.ATTEMPT4, text);
+    } else if (columnName === '- V5 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND5, text);
+      return new Token(TokenType.ATTEMPT5, text);
+    } else if (columnName === '- V6 -') {
+      if (wind) return new Token(TokenType.ATTEMPT_WIND6, text);
+      return new Token(TokenType.ATTEMPT6, text);
     }
     currentColumn += 1;
   }
@@ -492,6 +499,7 @@ export default (pages) => {
   let pageNo = 1;
   let report = false;
   let lastRowType;
+  let ignoreRow = false;
 
   for (const page of pages) {
     if (pageNo > 1) {
@@ -552,6 +560,11 @@ export default (pages) => {
           rowType = RowType.LONG_ATHLETE_NAME;
         }
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT, RowType.COMMENT];
+        
+        if (ignoreRow) {
+    		continue;
+    	}
+        
       } else if (
         nextRowTypes.includes(RowType.EVENT_HEADER) &&
         row[0].getX() < 100 &&
@@ -597,8 +610,14 @@ export default (pages) => {
         nextRowTypes.includes(RowType.COMMENT) && row.length === 1 &&
         row[0].getX() > resultColumns[resultColumns.length - 2].getRight()
       ) {
+    	  
         rowType = RowType.COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+        
+        if (ignoreRow) {
+    		continue;
+    	}
+        
       } else if (nextRowTypes.includes(RowType.TEAM_MEMBERS) && row.length > 1 && matchTeamMember(row[1]).length > 0) {
         rowType = RowType.TEAM_MEMBERS;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
@@ -606,11 +625,23 @@ export default (pages) => {
         rowType = RowType.TEAM_MEMBER_YOB;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
       } else if (nextRowTypes.includes(RowType.TEAM_MEMBERS) && row.length === 1 && resultColumns && row[0].getX() > resultColumns[resultColumns.length - 1].getRight()) {
+    	  
         rowType = RowType.TEAM_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
+        
+        if (ignoreRow) {
+    		continue;
+    	}
+        
       } else if (nextRowTypes.includes(RowType.RESULT) && row.length === 1 && resultColumns && row[0].getX() > resultColumns[resultColumns.length - 1].getRight()) {
-        rowType = RowType.SINGLE_RESULT_COMMENT;
+    	  
+    	rowType = RowType.SINGLE_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+        
+        if (ignoreRow) {
+    		continue;
+    	}
+        
       } else if (
         nextRowTypes.includes(RowType.RESULT) &&
         !isAttemptRow(row) &&
@@ -621,6 +652,7 @@ export default (pages) => {
         !isCombinedWindRow(row) &&
         !isCombinedPointsRow(row)
       ) {
+    	  
         rowType = RowType.RESULT;
         teamResult = resultColumns[1].getName() !== 'StNr';
         heightsRow = -1;
@@ -636,13 +668,45 @@ export default (pages) => {
             RowType.COMBINED_RESULT, RowType.LONG_CLUB_NAME,
             RowType.LONG_ATHLETE_CLUB_NAME,
           ];
+          
+          //ignore row -> n.a.
+          ignoreRow = false;
+          for (let i = 0; i < row.length; i += 1) {
+        	  if (row[i].text === 'n.a.'
+        		  ||
+        		  row[i].text === 'disq.'
+        		  ||
+            	  row[i].text === 'ogV'
+            	  ||
+                  row[i].text === 'abg.'
+            	  ) {
+        		  ignoreRow = true;
+        		  break;
+        	  }
+          }
+          if (ignoreRow) {
+        	  continue;
+          }
+          
         }
       } else if (nextRowTypes.includes(RowType.ATTEMPT) && attemptColumns.length > 0 && isAttemptRow(row)) {
+    	
         rowType = RowType.ATTEMPT;
         nextRowTypes = [RowType.RESULT, RowType.ATTEMPT_WIND, RowType.EVENT_HEADER];
+        
+        if (ignoreRow) {
+    		continue;
+    	}
+        
       } else if (nextRowTypes.includes(RowType.ATTEMPT_WIND) && isAttemptWindRow(row)) {
-        rowType = RowType.ATTEMPT_WIND;
+    	  
+    	rowType = RowType.ATTEMPT_WIND;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER];
+        
+        if (ignoreRow) {
+      		continue;
+      	}
+        
       } else if (nextRowTypes.includes(RowType.HEIGHT_HEADER) && isHeightHeaderRow(row)) {
         rowType = RowType.HEIGHT_HEADER;
         nextRowTypes = [RowType.RESULT, RowType.HEIGHT_HEADER];

@@ -36,6 +36,39 @@ export default class Parser {
       this.event();
     }
   }
+  
+  eventWind() {
+	  const winds = [];
+	  if (this.lookahead.type === TokenType.WIND) {
+	    	
+		  const windInfo = this.expression(TokenType.WIND);
+	      let groupWindInfo;
+	      let wind;
+	      let roundNumber;
+	      
+	      const pattern = new RegExp('([IVX]{1,}):([+-]?[0-9],[0-9])', 'g');
+	      while ((groupWindInfo = pattern.exec(windInfo)) !== null) {
+	        roundNumber = converter.deParse(groupWindInfo[1]);
+	        wind = Parser.processWind(groupWindInfo[2]);
+	        winds.push({
+	          roundNumber,
+	          wind,
+	        });
+	      }
+	      
+	      const pattern2 = new RegExp('([+-]?[0-9],[0-9])', 'g');
+	      while ((groupWindInfo = pattern2.exec(windInfo)) !== null) {
+	    	roundNumber = 1;
+	        wind = Parser.processWind(groupWindInfo[1]);
+	        winds.push({ 
+	          roundNumber, 
+	          wind, 
+	        });
+	        
+	      }
+	  }
+	  return winds;
+  }
 
   event() {
     const disciplineName = this.expression(TokenType.DISCIPLINE_NAME);
@@ -43,6 +76,10 @@ export default class Parser {
 
     let height;
     let weight;
+    let date;
+    let time;
+    let winds = [];
+    
     if (this.lookahead.type === TokenType.DISCIPLINE_ADDITIONAL_INFO) {
       const additionalInfo = this.expression(TokenType.DISCIPLINE_ADDITIONAL_INFO);
       if (additionalInfo.endsWith('mm')) {
@@ -52,42 +89,54 @@ export default class Parser {
       }
     }
 
+    //groupNumber
     let groupNumber;
     if (this.lookahead.type === TokenType.GROUP_NUMBER) {
       groupNumber = this.expression(TokenType.GROUP_NUMBER);
     }
-
-    let date;
+    
+    //wind
+    if (this.lookahead.type === TokenType.WIND) {
+    	winds = this.eventWind();
+    }  
+    
+    //date
     if (this.lookahead.type === TokenType.EVENT_DATE) {
-      date = this.expression(TokenType.EVENT_DATE);
+    	date = this.expression(TokenType.EVENT_DATE);
     }
-    let time;
+    
+    //time
     if (this.lookahead.type === TokenType.EVENT_TIME) {
-      time = this.expression(TokenType.EVENT_TIME);
-    }
+	    time = this.expression(TokenType.EVENT_TIME);
+	}
+    
+    //participant count
     if (this.lookahead.type === TokenType.PARTICIPANT_COUNT) {
       this.expression(TokenType.PARTICIPANT_COUNT);
     }
+    
+    //roundName
     let roundName = 'Finale';
     if (this.lookahead.type === TokenType.ROUND_NAME) {
       roundName = this.expression(TokenType.ROUND_NAME);
     }
-
-    const winds = [];
+    
+    //wind
     if (this.lookahead.type === TokenType.WIND) {
-      const windInfo = this.expression(TokenType.WIND);
-      const pattern = new RegExp('([IVX]{1,}):([+-]?[0-9],[0-9])', 'g');
-      let groupWindInfo;
-      while ((groupWindInfo = pattern.exec(windInfo)) !== null) {
-        const roundNumber = converter.deParse(groupWindInfo[1]);
-        const wind = Parser.processWind(groupWindInfo[2]);
-        winds.push({
-          roundNumber,
-          wind,
-        });
-      }
+    	winds = this.eventWind();
     }
+    
+    //date
+    if (this.lookahead.type === TokenType.EVENT_DATE) {
+    	date = this.expression(TokenType.EVENT_DATE);
+    }
+    
+    //time
+    if (this.lookahead.type === TokenType.EVENT_TIME) {
+	    time = this.expression(TokenType.EVENT_TIME);
+	}
 
+    //comment
     let comment;
     if (this.lookahead.type === TokenType.GROUP_INFO) {
       comment = this.expression(TokenType.GROUP_INFO);
