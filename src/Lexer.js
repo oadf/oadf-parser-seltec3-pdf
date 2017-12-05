@@ -700,7 +700,6 @@ export default (pages) => {
                   row[i].text === 'abg.'
             	  ) {
         		  currentColumn = 1;
-        		  tokens.push(teamResult?new Token(TokenType.TEAM_POSITION, "0"):new Token(TokenType.ATHLETE_POSITION, "0"));
         		  break;
         	  }
           }  
