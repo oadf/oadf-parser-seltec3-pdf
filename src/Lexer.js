@@ -499,8 +499,7 @@ export default (pages) => {
   let pageNo = 1;
   let report = false;
   let lastRowType;
-  let ignoreRow = false;
-
+  
   for (const page of pages) {
     if (pageNo > 1) {
       newPageNextRowTypes = nextRowTypes;
@@ -561,10 +560,6 @@ export default (pages) => {
         }
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT, RowType.COMMENT];
         
-        if (ignoreRow) {
-    		continue;
-    	}
-        
       } else if (
         nextRowTypes.includes(RowType.EVENT_HEADER) &&
         row[0].getX() < 100 &&
@@ -614,10 +609,6 @@ export default (pages) => {
         rowType = RowType.COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
         
-        if (ignoreRow) {
-    		continue;
-    	}
-        
       } else if (nextRowTypes.includes(RowType.TEAM_MEMBERS) && row.length > 1 && matchTeamMember(row[1]).length > 0) {
         rowType = RowType.TEAM_MEMBERS;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
@@ -628,20 +619,12 @@ export default (pages) => {
     	  
         rowType = RowType.TEAM_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
-        
-        if (ignoreRow) {
-    		continue;
-    	}
-        
+  
       } else if (nextRowTypes.includes(RowType.RESULT) && row.length === 1 && resultColumns && row[0].getX() > resultColumns[resultColumns.length - 1].getRight()) {
     	  
     	rowType = RowType.SINGLE_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
-        
-        if (ignoreRow) {
-    		continue;
-    	}
-        
+     
       } else if (
         nextRowTypes.includes(RowType.RESULT) &&
         !isAttemptRow(row) &&
@@ -669,43 +652,16 @@ export default (pages) => {
             RowType.LONG_ATHLETE_CLUB_NAME,
           ];
           
-          //ignore row -> n.a.
-          ignoreRow = false;
-          for (let i = 0; i < row.length; i += 1) {
-        	  if (row[i].text === 'n.a.'
-        		  ||
-        		  row[i].text === 'disq.'
-        		  ||
-            	  row[i].text === 'ogV'
-            	  ||
-                  row[i].text === 'abg.'
-            	  ) {
-        		  ignoreRow = true;
-        		  break;
-        	  }
-          }
-          if (ignoreRow) {
-        	  continue;
-          }
-          
         }
       } else if (nextRowTypes.includes(RowType.ATTEMPT) && attemptColumns.length > 0 && isAttemptRow(row)) {
     	
         rowType = RowType.ATTEMPT;
         nextRowTypes = [RowType.RESULT, RowType.ATTEMPT_WIND, RowType.EVENT_HEADER];
         
-        if (ignoreRow) {
-    		continue;
-    	}
-        
       } else if (nextRowTypes.includes(RowType.ATTEMPT_WIND) && isAttemptWindRow(row)) {
     	  
     	rowType = RowType.ATTEMPT_WIND;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER];
-        
-        if (ignoreRow) {
-      		continue;
-      	}
         
       } else if (nextRowTypes.includes(RowType.HEIGHT_HEADER) && isHeightHeaderRow(row)) {
         rowType = RowType.HEIGHT_HEADER;
@@ -732,9 +688,24 @@ export default (pages) => {
       }
 
       currentColumn = 0;
-
-      // console.log(rowType);
-
+      //check on special characters
+      if (rowType == RowType.RESULT) {
+    	  for (let i = 0; i < row.length; i += 1) {
+        	  if (row[i].text === 'n.a.'
+        		  ||
+        		  row[i].text === 'disq.'
+        		  ||
+            	  row[i].text === 'ogV'
+            	  ||
+                  row[i].text === 'abg.'
+            	  ) {
+        		  currentColumn = 1;
+        		  tokens.push(teamResult?new Token(TokenType.TEAM_POSITION, "0"):new Token(TokenType.ATHLETE_POSITION, "0"));
+        		  break;
+        	  }
+          }  
+      }
+      
       for (let i = 0; i < row.length; i += 1) {
         const element = row[i];
         const text = element.getText();
@@ -879,14 +850,6 @@ export default (pages) => {
   }
 
   tokens.push(new Token(TokenType.END));
-
-  /* for (const token of tokens) {
-    let ref = '';
-    if (token.ref) {
-      ref = `, '${token.ref}'`;
-    }
-    console.log(`new Token(Type.${token.type}, '${token.text}'${ref}),`);
-  }*/
 
   return tokens;
 };
