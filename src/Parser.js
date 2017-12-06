@@ -45,9 +45,11 @@ export default class Parser {
 	      let groupWindInfo;
 	      let wind;
 	      let roundNumber;
+	      let ready = false;
 	      
 	      const pattern = new RegExp('([IVX]{1,}):([+-]?[0-9],[0-9])', 'g');
 	      while ((groupWindInfo = pattern.exec(windInfo)) !== null) {
+	    	ready = true;
 	        roundNumber = converter.deParse(groupWindInfo[1]);
 	        wind = Parser.processWind(groupWindInfo[2]);
 	        winds.push({
@@ -56,16 +58,19 @@ export default class Parser {
 	        });
 	      }
 	      
-	      const pattern2 = new RegExp('([+-]?[0-9],[0-9])', 'g');
-	      while ((groupWindInfo = pattern2.exec(windInfo)) !== null) {
-	    	roundNumber = 1;
-	        wind = Parser.processWind(groupWindInfo[1]);
-	        winds.push({ 
-	          roundNumber, 
-	          wind, 
-	        });
-	        
+	      if (!ready) {
+	    	  const pattern2 = new RegExp('([+-]?[0-9],[0-9])', 'g');
+		      while ((groupWindInfo = pattern2.exec(windInfo)) !== null) {
+		    	roundNumber = 1;
+		        wind = Parser.processWind(groupWindInfo[1]);
+		        winds.push({ 
+		          roundNumber, 
+		          wind, 
+		        });
+		        
+		      } 
 	      }
+	      
 	  }
 	  return winds;
   }

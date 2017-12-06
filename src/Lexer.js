@@ -229,9 +229,28 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
   return new Token(TokenType.UNKNOWN, text);
 }
 
-function matchAttemptColumn(attemptColumns, element, wind) {
+function matchAttemptColumn(attemptColumns, element, wind, validAttemptValues) {
   const text = element.getText();
   for (let i = currentColumn; i < attemptColumns.length; i += 1) {
+	  
+	if (!wind) {
+		if (text != 'x' && isNaN(parseFloat(text.replace(',', '.')))) {
+    		validAttemptValues[i] = false;
+    	}
+    	else {
+    		validAttemptValues[i] = true;
+    	}
+    }
+	else {
+		while (!validAttemptValues[i] && i < attemptColumns.length) {
+			i++;
+		}
+		if (i >= attemptColumns.length) {
+			return undefined;
+		}
+	}
+	  
+	  
     const column = attemptColumns[i];
     let previousColumn = null;
     if (i > 0) {
@@ -239,6 +258,7 @@ function matchAttemptColumn(attemptColumns, element, wind) {
     }
     currentColumn += 1;
     const columnName = column.getName();
+    
     if (columnName === '- V1 -') {
       if (wind) return new Token(TokenType.ATTEMPT_WIND1, text);
       return new Token(TokenType.ATTEMPT1, text);
@@ -259,6 +279,7 @@ function matchAttemptColumn(attemptColumns, element, wind) {
       return new Token(TokenType.ATTEMPT6, text);
     }
     currentColumn += 1;
+    
   }
   /* istanbul ignore next */
   return new Token(TokenType.UNKNOWN, text);
@@ -499,6 +520,7 @@ export default (pages) => {
   let pageNo = 1;
   let report = false;
   let lastRowType;
+  let validAttemptValues = {};
   
   for (const page of pages) {
     if (pageNo > 1) {
@@ -689,7 +711,7 @@ export default (pages) => {
 
       currentColumn = 0;
       //check on special characters
-      if (rowType == RowType.RESULT) {
+      if (rowType == RowType.RESULT && row.length != resultColumns.length) {
     	  for (let i = 0; i < row.length; i += 1) {
         	  if (row[i].text === 'n.a.'
         		  ||
@@ -703,6 +725,10 @@ export default (pages) => {
         		  break;
         	  }
           }  
+      }
+      
+      if (rowType == RowType.ATTEMPT) {
+    	  validAttemptValues = {};
       }
       
       for (let i = 0; i < row.length; i += 1) {
@@ -738,10 +764,13 @@ export default (pages) => {
             tokens.push(matchResultColumn(resultColumns, resultColumnNames, element, teamResult));
             break;
           case RowType.ATTEMPT:
-            tokens.push(matchAttemptColumn(attemptColumns, element, false));
+            tokens.push(matchAttemptColumn(attemptColumns, element, false, validAttemptValues));
             break;
           case RowType.ATTEMPT_WIND:
-            tokens.push(matchAttemptColumn(attemptColumns, element, true));
+        	let attemptToken = matchAttemptColumn(attemptColumns, element, true, validAttemptValues); 
+        	if (attemptToken != undefined) {
+        		 tokens.push(attemptToken);	
+        	}
             break;
           case RowType.HEIGHT_HEADER:
             currentHeightColumns.push(new Column(element, Alignment.CENTER, ContentType.HEIGHT_RESULT));
