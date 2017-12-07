@@ -711,7 +711,8 @@ export default (pages) => {
 
       currentColumn = 0;
       //check on special characters
-      if (rowType == RowType.RESULT && row.length != resultColumns.length) {
+      if (rowType == RowType.RESULT) {
+    	  let invalidResult = false;
     	  for (let i = 0; i < row.length; i += 1) {
         	  if (row[i].text === 'n.a.'
         		  ||
@@ -721,10 +722,15 @@ export default (pages) => {
             	  ||
                   row[i].text === 'abg.'
             	  ) {
-        		  currentColumn = 1;
+        		  invalidResult = true;
         		  break;
         	  }
           }  
+    	  
+    	  if (invalidResult && isNaN(parseInt(row[1].text)) && !isNaN(parseInt(row[0].text))) {
+    		  currentColumn = 1;  
+    	  }
+    	  
       }
       
       if (rowType == RowType.ATTEMPT) {
