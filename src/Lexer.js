@@ -243,6 +243,7 @@ function matchAttemptColumn(attemptColumns, element, wind, validAttemptValues) {
     }
 	else {
 		while (!validAttemptValues[i] && i < attemptColumns.length) {
+			currentColumn += 1;
 			i++;
 		}
 		if (i >= attemptColumns.length) {
@@ -250,14 +251,13 @@ function matchAttemptColumn(attemptColumns, element, wind, validAttemptValues) {
 		}
 	}
 	  
-	  
     const column = attemptColumns[i];
     let previousColumn = null;
     if (i > 0) {
       previousColumn = attemptColumns[i - 1];
     }
-    currentColumn += 1;
     const columnName = column.getName();
+    currentColumn += 1;
     
     if (columnName === '- V1 -') {
       if (wind) return new Token(TokenType.ATTEMPT_WIND1, text);
