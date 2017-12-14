@@ -46,6 +46,8 @@ columnAlignments.Jahr = Alignment.CENTER;
 contentTypes.Jahr = ContentType.INTEGER;
 columnAlignments.Land = Alignment.CENTER;
 contentTypes.Land = ContentType.TEXT;
+columnAlignments["Nat."] = Alignment.CENTER;
+contentTypes["Nat."] = ContentType.TEXT;
 columnAlignments.LV = Alignment.CENTER;
 contentTypes.LV = ContentType.TEXT;
 columnAlignments.Verein = Alignment.LEFT;
@@ -54,6 +56,8 @@ columnAlignments.Leistung = Alignment.CENTER;
 contentTypes.Leistung = ContentType.RESULT;
 columnAlignments.Punkte = Alignment.CENTER;
 contentTypes.Punkte = ContentType.RESULT;
+columnAlignments["Q/Punkte"] = Alignment.CENTER;
+contentTypes["Q/Punkte"] = ContentType.RESULT;
 columnAlignments.Wind = Alignment.LEFT;
 contentTypes.Wind = ContentType.WIND;
 columnAlignments.Q = Alignment.LEFT;
@@ -162,7 +166,7 @@ function getEventInfo(text) {
 }
 
 function matchResultColumn(resultColumns, resultColumnNames, element, teamResult, allColumns = false) {
-  const text = element.getText();
+  let text = element.getText();
   // There is a special case where a weight is printed between club and performance
   const lastColumn = resultColumns[currentColumn - 1];
   if (lastColumn && lastColumn.getName() === 'Verein' && element.getText().match(/^[0-9]+g$/)) {
@@ -202,7 +206,7 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
         return new Token(TokenType.ATHLETE_FULL_NAME, text);
       } else if (columnName === 'Jahr') {
         return new Token(TokenType.ATHLETE_YOB, text);
-      } else if (columnName === 'Land' || columnName === 'LV') {
+      } else if (columnName === 'Land' || columnName === 'LV' || columnName === 'Nat.') {
         if (teamResult) return new Token(TokenType.TEAM_COUNTRY, text);
         return new Token(TokenType.ATHLETE_COUNTRY, text);
       } else if (columnName === 'Verein') {
@@ -210,7 +214,11 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
         return new Token(TokenType.ATHLETE_CLUB_NAME, text);
       } else if (columnName === 'Leistung' || (columnName === 'Punkte' && !resultColumnNames.includes('Leistung'))) {
         return new Token(TokenType.PERFORMANCE, text);
-      } else if (columnName === 'Punkte') {
+      } else if (columnName === 'Punkte' || columnName === 'Q/Punkte') {
+    	if (columnName === 'Q/Punkte') {
+    		text = text.replace("/","");
+    		text = text.replace("q","");
+    	}
         return new Token(TokenType.POINTS, text);
       } else if (columnName === 'Wind') {
         return new Token(TokenType.WIND, text);
@@ -532,8 +540,22 @@ export default (pages) => {
       currentColumn = 0;
 
       const firstText = row[0].getText();
-      if (firstText.startsWith('Gedruckt ') || firstText.startsWith('Dataservice by') || report) {
-        continue;
+      
+      if (firstText.startsWith('Veranstalter')) {
+    	  break;
+      }
+      if (firstText.startsWith('Gedruckt ') 
+    	  ||
+    	  firstText.startsWith('Dataservice by') 
+    	  || 
+    	  report 
+    	  || 
+    	  firstText.startsWith('Anmerkung Zeitlauf') 
+    	  || 
+    	  firstText.startsWith('www.')
+    	  ||
+    	  firstText.startsWith('yc 162.5c')) {
+    	  continue;
       }
       let teamResult = false;
 
@@ -638,7 +660,7 @@ export default (pages) => {
         rowType = RowType.TEAM_MEMBER_YOB;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
       } else if (nextRowTypes.includes(RowType.TEAM_MEMBERS) && row.length === 1 && resultColumns && row[0].getX() > resultColumns[resultColumns.length - 1].getRight()) {
-    	  
+        
         rowType = RowType.TEAM_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
   
@@ -721,6 +743,8 @@ export default (pages) => {
             	  row[i].text === 'ogV'
             	  ||
                   row[i].text === 'abg.'
+                  ||
+                  row[i].text === 'aufg.'
             	  ) {
         		  invalidResult = true;
         		  break;
