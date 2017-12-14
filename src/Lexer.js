@@ -470,7 +470,7 @@ function isCombinedHeaderRow(row) {
 }
 
 function isCombinedResultRow(row) {
-  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|Can|Dns|0|Dnf$'), row);
+  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|Can|Dns|0|Dnf$'), row);
 }
 
 function isCombinedWindRow(row) {
