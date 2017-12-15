@@ -470,7 +470,7 @@ function isCombinedHeaderRow(row) {
 }
 
 function isCombinedResultRow(row) {
-  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|Can|Dns|0|Dnf$'), row);
+  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|Can|Dns|0|Dnf$'), row);
 }
 
 function isCombinedWindRow(row) {
@@ -529,6 +529,7 @@ export default (pages) => {
   let report = false;
   let lastRowType;
   let validAttemptValues = {};
+  let completedTeamResultComment = false;
   
   for (const page of pages) {
     if (pageNo > 1) {
@@ -558,7 +559,8 @@ export default (pages) => {
     	  continue;
       }
       let teamResult = false;
-
+      completedTeamResultComment = false;
+      
       let rowType = RowType.UNKNOWN;
       if (nextRowTypes.includes(RowType.COMPETITION_NAME)) {
         rowType = RowType.COMPETITION_NAME;
@@ -644,7 +646,7 @@ export default (pages) => {
         matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_CLUB_NAME
       ) {
         rowType = RowType.LONG_CLUB_NAME;
-        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT];
+        nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.HEIGHT, RowType.ATTEMPT, RowType.COMBINED_RESULT];
       } else if (
         nextRowTypes.includes(RowType.COMMENT) && row.length === 1 &&
         row[0].getX() > resultColumns[resultColumns.length - 2].getRight()
@@ -664,6 +666,12 @@ export default (pages) => {
         rowType = RowType.TEAM_RESULT_COMMENT;
         nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
   
+      } else if (nextRowTypes.includes(RowType.TEAM_RESULT_COMMENT) && row.length === 1) {
+    	
+    	  completedTeamResultComment = true;
+    	  rowType = RowType.TEAM_RESULT_COMMENT;
+          nextRowTypes = [RowType.RESULT, RowType.EVENT_HEADER, RowType.TEAM_MEMBERS];
+
       } else if (nextRowTypes.includes(RowType.RESULT) && row.length === 1 && resultColumns && row[0].getX() > resultColumns[resultColumns.length - 1].getRight()) {
     	  
     	rowType = RowType.SINGLE_RESULT_COMMENT;
@@ -685,7 +693,7 @@ export default (pages) => {
         heightsRow = -1;
         if (teamResult) {
           nextRowTypes = [
-            RowType.TEAM_MEMBERS, RowType.LONG_TEAM_CLUB_NAME,
+            RowType.TEAM_MEMBERS, RowType.LONG_TEAM_CLUB_NAME, RowType.TEAM_RESULT_COMMENT
           ];
         } else {
           nextRowTypes = [
@@ -719,7 +727,7 @@ export default (pages) => {
         currentHeightColumns = heightColumns[heightsRow];
       } else if (nextRowTypes.includes(RowType.COMBINED_RESULT) && isCombinedResultRow(row)) {
         rowType = RowType.COMBINED_RESULT;
-        nextRowTypes = [RowType.COMBINED_WIND, RowType.COMBINED_POINTS];
+        nextRowTypes = [RowType.COMBINED_WIND, RowType.COMBINED_POINTS, RowType.RESULT, RowType.EVENT_HEADER];
       } else if (nextRowTypes.includes(RowType.COMBINED_WIND) && isCombinedWindRow(row)) {
         rowType = RowType.COMBINED_WIND;
         nextRowTypes = [RowType.COMBINED_POINTS];
@@ -769,7 +777,7 @@ export default (pages) => {
             tokens.push(new Token(TokenType.COMPETITION_NAME, text));
             break;
           case RowType.COMPETITION_INFO:
-            if (text !== 'ERGEBNISSE' && text !== 'ERGEBNISLISTE') {
+        	if (text !== 'ERGEBNISSE' && text !== 'ERGEBNISLISTE' && text.length > 1) {
               tokens.push(...getCompetitionInfo(text));
             }
             break;
@@ -848,13 +856,18 @@ export default (pages) => {
             }
             break;
           case RowType.TEAM_RESULT_COMMENT:
-            for (let j = tokens.length - 1; j >= 0; j -= 1) {
-              const token = tokens[j];
-              if (token.type === TokenType.COMMENT) {
-                token.text = `${token.text} ${text}`;
-                break;
-              }
-            }
+        	if (completedTeamResultComment) {
+        		//tokens.push(new Token(TokenType.COMMENT, text));
+        	}  
+        	else {
+        		for (let j = tokens.length - 1; j >= 0; j -= 1) {
+        			const token = tokens[j];
+                    if (token.type === TokenType.COMMENT) {
+                    	token.text = `${token.text} ${text}`;
+                    	break;
+                    }
+                }	
+        	}  
             break;
           case RowType.SINGLE_RESULT_COMMENT:
             for (let j = tokens.length - 1; j >= 0; j -= 1) {
