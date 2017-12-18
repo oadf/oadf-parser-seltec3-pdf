@@ -228,12 +228,19 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
       /* istanbul ignore next */
       return new Token(TokenType.UNKNOWN, text);
     }
+    
     if (!allColumns) {
       currentColumn += 1;
     }
   }
 
   /* istanbul ignore next */
+  if (!allColumns && lastColumn && lastColumn.getName() === 'Verein') {
+	  currentColumn -= 1;
+	  if (teamResult) return new Token(TokenType.TEAM_CLUB_NAME, text);
+      return new Token(TokenType.ATHLETE_CLUB_NAME, text);
+  }
+  
   return new Token(TokenType.UNKNOWN, text);
 }
 
@@ -470,7 +477,7 @@ function isCombinedHeaderRow(row) {
 }
 
 function isCombinedResultRow(row) {
-  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|Can|Dns|0|Dnf$'), row);
+  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|abg\\.|Can|Dns|0|Dnf$'), row);
 }
 
 function isCombinedWindRow(row) {
@@ -551,13 +558,18 @@ export default (pages) => {
     	  || 
     	  report 
     	  || 
-    	  firstText.startsWith('Anmerkung Zeitlauf') 
+    	  firstText.startsWith('Anmerkung') 
     	  || 
     	  firstText.startsWith('www.')
     	  ||
     	  firstText.startsWith('yc 162.5c')) {
     	  continue;
       }
+      
+      if (lastRowType === RowType.HEIGHT_HEADER && firstText.startsWith('(J)')) {
+    	  continue;
+      }
+      
       let teamResult = false;
       completedTeamResultComment = false;
       
@@ -799,8 +811,17 @@ export default (pages) => {
             attemptColumns.push(new Column(element, Alignment.CENTER, ContentType.RESULT));
             break;
           case RowType.RESULT:
-            tokens.push(matchResultColumn(resultColumns, resultColumnNames, element, teamResult));
-            break;
+        	let resultToken = matchResultColumn(resultColumns, resultColumnNames, element, teamResult);
+        	if ((resultToken.type === TokenType.TEAM_CLUB_NAME || resultToken.type === TokenType.ATHLETE_CLUB_NAME)
+        		&&
+        		(tokens[tokens.length-1].type === TokenType.TEAM_CLUB_NAME || tokens[tokens.length-1].type === TokenType.ATHLETE_CLUB_NAME)
+        	) {
+        		tokens[tokens.length-1].text = tokens[tokens.length-1].text + resultToken.text;
+        	}
+        	else {
+        		tokens.push(resultToken);	
+        	}	
+        	break;
           case RowType.ATTEMPT:
             tokens.push(matchAttemptColumn(attemptColumns, element, false, validAttemptValues));
             break;
@@ -889,7 +910,9 @@ export default (pages) => {
             combinedColumns.push(new Column(element, Alignment.CENTER, ContentType.RESULT));
             break;
           case RowType.COMBINED_RESULT:
-            if (!text.match(/\(-[0-9]{1,5}\)/)) {
+        	let lText = text;
+        	lText = lText.trim().replace(' ','');
+            if (!lText.match(/\(-[0-9]{1,5}\)/)) {
               tokens.push(matchCombinedColumn(combinedColumns, element, TokenType.COMBINED_PERFORMANCE));
             }
             break;

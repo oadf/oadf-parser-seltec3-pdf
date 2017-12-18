@@ -115,6 +115,11 @@ export default class Parser {
 	    time = this.expression(TokenType.EVENT_TIME);
 	}
     
+    //groupNumber
+    if (this.lookahead.type === TokenType.GROUP_NUMBER) {
+      groupNumber = this.expression(TokenType.GROUP_NUMBER);
+    }
+    
     //participant count
     if (this.lookahead.type === TokenType.PARTICIPANT_COUNT) {
       this.expression(TokenType.PARTICIPANT_COUNT);
