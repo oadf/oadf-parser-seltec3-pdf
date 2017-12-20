@@ -105,7 +105,7 @@ function getEventHeader(text) {
   return tokens;
 }
 
-function getEventInfo(text) {
+function getEventInfo(text, globalTokens) {
   const tokens = [];
 
   const pattern1 = new RegExp('^([0-9]{2}\\.[0-9]{2}\\.[0-9]{4})\\s/\\s([0-9]{1,2}:[0-9]{2})$');
@@ -161,7 +161,19 @@ function getEventInfo(text) {
     return tokens;
   }
 
-  tokens.push(new Token(TokenType.ROUND_NAME, text));
+  if (text.trim() == '') {
+	return tokens;
+  }
+  
+  if (globalTokens && globalTokens[globalTokens.length-1].type == TokenType.ROUND_NAME) {
+	globalTokens[globalTokens.length-1].text = globalTokens[globalTokens.length-1].text + " " + text;
+	globalTokens[globalTokens.length-1].text = globalTokens[globalTokens.length-1].text.trim();
+  }
+  else {
+    tokens.push(new Token(TokenType.ROUND_NAME, text)); 
+    tokens[tokens.length-1].text = tokens[tokens.length-1].text.trim();
+  }
+  
   return tokens;
 }
 
@@ -446,9 +458,13 @@ function matchSplitTime(element, column) {
   }
 }
 
-function matchPattern(pattern, row) {
+function matchPattern(pattern, row, trimAndReplaceWhitespaces = false) {
   for (const field of row) {
-    const result = field.getText().match(pattern);
+	let text = field.getText();
+	if (trimAndReplaceWhitespaces) {
+		text = text.trim().replace(' ','');
+	}
+    const result = text.match(pattern);
     if (!result) {
       return false;
     }
@@ -477,7 +493,7 @@ function isCombinedHeaderRow(row) {
 }
 
 function isCombinedResultRow(row) {
-  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|abg\\.|Can|Dns|0|Dnf$'), row);
+  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|abg\\.|Can|Dns|0|Dnf$'), row, true);
 }
 
 function isCombinedWindRow(row) {
@@ -552,10 +568,19 @@ export default (pages) => {
       if (firstText.startsWith('Veranstalter')) {
     	  break;
       }
+      
       if (firstText.startsWith('Gedruckt ') 
     	  ||
     	  firstText.startsWith('Dataservice by') 
     	  || 
+    	  firstText.startsWith('Dataserv') 
+    	  ||
+    	  firstText.startsWith('ice by') 
+    	  ||
+    	  firstText.startsWith('Internet-Ser') 
+    	  ||
+    	  firstText.startsWith('vice: w ww.laportal.net') 
+    	  ||
     	  report 
     	  || 
     	  firstText.startsWith('Anmerkung') 
@@ -568,6 +593,10 @@ export default (pages) => {
       
       if (lastRowType === RowType.HEIGHT_HEADER && firstText.startsWith('(J)')) {
     	  continue;
+      }
+      
+      if (lastRowType == RowType.UNKNOWN && nextRowTypes.length == 1 && nextRowTypes[0] == RowType.COMBINED_TEAM_MEMBER_RESULT) {
+    	  nextRowTypes = [RowType.COMBINED_TEAM_MEMBER_RESULT, RowType.COMBINED_TEAM_RESULT, RowType.EVENT_HEADER];
       }
       
       let teamResult = false;
@@ -606,7 +635,7 @@ export default (pages) => {
         nextRowTypes = [RowType.COMBINED_TEAM_MEMBER_RESULT, RowType.COMBINED_TEAM_RESULT, RowType.EVENT_HEADER];
       } else if (nextRowTypes.includes(RowType.EVENT_INFO) && isEventInfoRow(row)) {
         rowType = RowType.EVENT_INFO;
-        nextRowTypes = [RowType.RESULT_HEADER, RowType.EVENT_INFO, RowType.EVENT_HEADER];
+        nextRowTypes = [RowType.RESULT_HEADER, RowType.EVENT_INFO, RowType.EVENT_HEADER, RowType.COMBINED_TEAM_RESULT];
       } else if (
         (nextRowTypes.includes(RowType.LONG_ATHLETE_NAME) || nextRowTypes.includes(RowType.COMMENT)) && row.length === 1 &&
         matchResultColumn(resultColumns, resultColumnNames, row[0], teamResult, true).type === TokenType.ATHLETE_FULL_NAME
@@ -797,11 +826,11 @@ export default (pages) => {
             if (i === 0) {
               tokens.push(...getEventHeader(text));
             } else {
-              tokens.push(...getEventInfo(text));
+              tokens.push(...getEventInfo(text, tokens));
             }
             break;
           case RowType.EVENT_INFO:
-            tokens.push(...getEventInfo(text));
+            tokens.push(...getEventInfo(text, tokens));
             break;
           case RowType.RESULT_HEADER:
             resultColumns.push(new Column(element, columnAlignments[text], contentTypes[text]));
@@ -811,6 +840,9 @@ export default (pages) => {
             attemptColumns.push(new Column(element, Alignment.CENTER, ContentType.RESULT));
             break;
           case RowType.RESULT:
+        	if (row.length == 1) {
+        		break;
+        	}  
         	let resultToken = matchResultColumn(resultColumns, resultColumnNames, element, teamResult);
         	if ((resultToken.type === TokenType.TEAM_CLUB_NAME || resultToken.type === TokenType.ATHLETE_CLUB_NAME)
         		&&

@@ -25,7 +25,6 @@ function execute() {
 	);
 }
 
-/*
 var files = [
 	'./test/einzelergebnisse.pdf',
 	'./test/einzelergebnisse2.pdf',
@@ -46,11 +45,6 @@ var files = [
 	'./test/mehrkampf7.pdf',
 	'./test/mehrkampf8.pdf',
 	'./test/mehrkampf9.pdf'
-];
-*/
-
-var files = [
-	'./test/mehrkampf5.pdf'
 ];
 
 execute();
