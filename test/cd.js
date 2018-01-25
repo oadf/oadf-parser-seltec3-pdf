@@ -36,6 +36,7 @@ var files = [
 	'./test/einzelergebnisse8.pdf',
 	'./test/einzelergebnisse9.pdf',
 	'./test/einzelergebnisse10.pdf',
+        './test/einzelergebnisse11.pdf',
 	'./test/mehrkampf.pdf',
 	'./test/mehrkampf2.pdf',
 	'./test/mehrkampf3.pdf',

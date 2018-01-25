@@ -500,8 +500,8 @@ export default class Parser {
 
   static processName(name) {
     const nameParts = name.split(' ');
-    const lastName = nameParts.shift();
-    const firstName = nameParts.join(' ');
+    const lastName = nameParts.shift().trim();
+    const firstName = nameParts.join(' ').trim();
     return {
       firstName,
       lastName,
