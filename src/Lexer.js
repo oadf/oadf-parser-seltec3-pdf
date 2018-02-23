@@ -64,6 +64,7 @@ columnAlignments.Q = Alignment.LEFT;
 contentTypes.Q = ContentType.TEXT;
 
 let currentColumn = 0;
+let missingStnrColumn = false;
 
 function getCompetitionInfo(text) {
   const tokens = [];
@@ -197,6 +198,11 @@ function matchResultColumn(resultColumns, resultColumnNames, element, teamResult
   }
 
   for (let i = startColumn; i < resultColumns.length; i += 1) {
+    
+    if (i > 0 && missingStnrColumn) {
+        i++;
+    }  
+      
     const column = resultColumns[i];
     let previousColumn = null;
     const nextColumn = resultColumns[i + 1];
@@ -485,7 +491,7 @@ function isHeightHeaderRow(row) {
 }
 
 function isHeightRow(row) {
-  return matchPattern(new RegExp('^X{0,}O?(?:-|r)?$'), row);
+  return matchPattern(new RegExp('^X{0,}O?(?:-|--|r)?$'), row);
 }
 
 function isCombinedHeaderRow(row) {
@@ -493,7 +499,7 @@ function isCombinedHeaderRow(row) {
 }
 
 function isCombinedResultRow(row) {
-  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|abg\\.|Can|Dns|0|Dnf$'), row, true);
+  return matchPattern(new RegExp('^(?:[0-9]+:)?[0-9]{1,2},[0-9]{1,2}|\\(-[0-9]{1,4}\\)|ogV|n\\.a\\.|aufg\\.|abg\\.|Can|Dns|0|Dnf$'), row, true);
 }
 
 function isCombinedWindRow(row) {
@@ -562,6 +568,7 @@ export default (pages) => {
 
     for (const row of page) {
       currentColumn = 0;
+      missingStnrColumn = false;
 
       const firstText = row[0].getText();
       
@@ -781,10 +788,30 @@ export default (pages) => {
       }
 
       currentColumn = 0;
+      missingStnrColumn = false;
       //check on special characters
-      if (rowType == RowType.RESULT) {
+      if (rowType == RowType.RESULT && row.length > 3) {
+          
+          //wenn der erste text 1(1) -> das ist der rang
+          //der zweite Wert
+          if (!teamResult
+              &&
+              row[0].text.match(/[0-9]+\s*\([0-9]+\)$/)
+              &&
+              row[1].text.match(/^[^0-9]*$/)) {
+              missingStnrColumn = true;
+          }
+          else if (
+              !teamResult 
+              &&
+              row[0].text.match(/^[^0-9]*$/)
+              &&
+              row[0].text !== 'aW') {
+              missingStnrColumn = true;
+          }
+          
     	  let invalidResult = false;
-    	  for (let i = 0; i < row.length; i += 1) {
+          for (let i = 0; i < row.length; i += 1) {
         	  if (row[i].text === 'n.a.'
         		  ||
         		  row[i].text === 'disq.'
@@ -794,14 +821,39 @@ export default (pages) => {
                   row[i].text === 'abg.'
                   ||
                   row[i].text === 'aufg.'
-            	  ) {
-        		  invalidResult = true;
-        		  break;
+                  ) {
+                    invalidResult = true;
+                    break;
         	  }
-          }  
-    	  
-    	  if (invalidResult && isNaN(parseInt(row[1].text)) && !isNaN(parseInt(row[0].text))) {
-    		  currentColumn = 1;  
+          }
+          
+          if (!invalidResult) {
+              
+              invalidResult = true;
+              if ((row[0].text.match(/[0-9]+\s*\([0-9]+\)$/)
+                  ||
+                  row[0].text.match(/^[0-9]*$/))
+                  &&
+                  row[1].text.match(/^[0-9]*$/)
+                  &&
+                  !teamResult) {
+                  invalidResult = false;
+              }
+              if ((row[0].text.match(/[0-9]+\s*\([0-9]+\)$/)
+                  ||
+                  row[0].text.match(/^[0-9]*$/))
+                  &&
+                  teamResult) {
+                  invalidResult = false;
+              }
+                               
+          }
+          
+          if (invalidResult && missingStnrColumn) {
+            currentColumn = 2;
+          }
+    	  else if (invalidResult && isNaN(parseInt(row[1].text)) && !isNaN(parseInt(row[0].text))) {
+            currentColumn = 1;  
     	  }
     	  
       }
@@ -841,18 +893,23 @@ export default (pages) => {
             break;
           case RowType.RESULT:
         	if (row.length == 1) {
-        		break;
-        	}  
+                    break;
+        	} 
+                
+                if (currentColumn == 1 && missingStnrColumn) {
+                    tokens.push(new Token(TokenType.ATHLETE_BIB, "0"));
+                }
+                
         	let resultToken = matchResultColumn(resultColumns, resultColumnNames, element, teamResult);
         	if ((resultToken.type === TokenType.TEAM_CLUB_NAME || resultToken.type === TokenType.ATHLETE_CLUB_NAME)
-        		&&
-        		(tokens[tokens.length-1].type === TokenType.TEAM_CLUB_NAME || tokens[tokens.length-1].type === TokenType.ATHLETE_CLUB_NAME)
-        	) {
-        		tokens[tokens.length-1].text = tokens[tokens.length-1].text + resultToken.text;
+        	    &&
+        	    (tokens[tokens.length-1].type === TokenType.TEAM_CLUB_NAME || tokens[tokens.length-1].type === TokenType.ATHLETE_CLUB_NAME)) {
+                    tokens[tokens.length-1].text = tokens[tokens.length-1].text + resultToken.text;
         	}
         	else {
-        		tokens.push(resultToken);	
-        	}	
+                    tokens.push(resultToken);	
+        	}
+                
         	break;
           case RowType.ATTEMPT:
             tokens.push(matchAttemptColumn(attemptColumns, element, false, validAttemptValues));
@@ -970,6 +1027,31 @@ export default (pages) => {
       }
 
       lastRowType = rowType;
+      
+      //check on performance
+      if (rowType === RowType.RESULT) {
+        for (let j = tokens.length - 1; j >= 0; j -= 1) {
+            const token = tokens[j];
+            if (token.type === TokenType.PERFORMANCE) {
+                break;
+            }
+            if (token.type === TokenType.ATHLETE_CLUB_NAME
+                ||
+                token.type === TokenType.RESULT_WEIGHT) {
+                
+                if (j == tokens.length - 1) {
+                    tokens.push(new Token(TokenType.PERFORMANCE, "disq."));
+                }
+                else {
+                    tokens.splice(j+1, 0, new Token(TokenType.PERFORMANCE, "disq."));
+                }
+                
+                break;
+            }
+          }
+      }
+      
+      
     }
 
     pageNo += 1;
